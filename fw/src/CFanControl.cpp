@@ -12,15 +12,17 @@ CFanControl::CFanControl(int nPin)
   pinMode(nPin, OUTPUT);
   digitalWrite(nPin, LOW);
 
-  m_pTempFanOn = CreateConfigKey<int>("FanControl", "TempFanOn", 25);
+  m_pTempFanOn = CreateConfigKey<double>("FanControl", "TempFanOn", 25);
 
-  m_pTempFanOff = CreateConfigKey<int>("FanControl", "TempFanOff", 23);
+  m_pTempFanOff = CreateConfigKey<double>("FanControl", "TempFanOff", 23);
 }
 
 bool CFanControl::setup() {
 
   m_pMqtt_ControlMode = CreateMqttValue("ControlMode", "Automatic");
   m_pMqtt_FanState = CreateMqttValue("FanState", "Unknown");
+  m_pMqtt_FanStateB = CreateMqttValue("FanStateB", "0");
+  m_pMqtt_Temperature = CreateMqttValue("Temperature", "");
 
   m_pMqtt_CmdSwitch = CreateMqttCmd("CmdSwitch");
 
@@ -58,6 +60,9 @@ void CFanControl::control(bool bForce /*= false*/) {
 
     if (m_eFanControlMode == eAutomatic && m_pDS18B20 != NULL) {
       double dTemp = m_pDS18B20->GetTemperature(0);
+      char szTmp[16];
+      snprintf(szTmp, sizeof(szTmp), "%.1f", dTemp);
+      m_pMqtt_Temperature->setValue(szTmp);
       if (m_bIsOn) {
         if (dTemp < m_pTempFanOff->GetValue()) {
           SetOutput(false);
@@ -144,6 +149,7 @@ void CFanControl::SetOutput(bool bOn) {
   digitalWrite(m_nPin, bOn);
   m_bIsOn = bOn;
   m_pMqtt_FanState->setValue(bOn ? "on" : "off");
+  m_pMqtt_FanStateB->setValue(bOn ? "1" : "0");
 
   if (m_pDisplayLine != NULL) {
     char szTmp[64] = "";

@@ -41,11 +41,13 @@ public:
 
   void SwitchControlMode(E_LIGHTCONTROLMODE eMode);
 
-  CConfigKey<int> *m_pTempFanOn = NULL;
-  CConfigKey<int> *m_pTempFanOff = NULL;
+  CConfigKey<double> *m_pTempFanOn = NULL;
+  CConfigKey<double> *m_pTempFanOff = NULL;
 
   CMqttValue *m_pMqtt_ControlMode = NULL;
   CMqttValue *m_pMqtt_FanState = NULL;
+  CMqttValue *m_pMqtt_FanStateB = NULL;
+  CMqttValue *m_pMqtt_Temperature = NULL;
 
   CMqttCmd *m_pMqtt_CmdSwitch = NULL;
   void ControlMqttCmdCallback(CMqttCmd *pCmd, byte *payload,

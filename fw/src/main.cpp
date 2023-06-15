@@ -3,7 +3,7 @@
  */
 #include <Arduino.h>
 
-char VERSION_STRING[] = "0.0.1.2";
+char VERSION_STRING[] = "0.0.1.6";
 char APPNAME[] = "EspFanControl";
 char SHORTNAME[] = "ESPFC";
 
