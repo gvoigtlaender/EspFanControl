@@ -3,7 +3,7 @@
  */
 #include <Arduino.h>
 
-char VERSION_STRING[] = "0.0.1.6";
+char VERSION_STRING[] = "0.0.2.2";
 char APPNAME[] = "EspFanControl";
 char SHORTNAME[] = "ESPFC";
 
@@ -135,7 +135,7 @@ void handleStatusUpdate() {
   sContent += "</table>\n";
   CheckFreeHeap();
   server.send(200, "text/html", sContent.c_str());
-  CControl::Log(CControl::I, "handleStatusUpdate done, buffersize=%u",
+  CControl::Log(CControl::D, "handleStatusUpdate done, buffersize=%u",
                 sContent.length());
 }
 
@@ -329,17 +329,16 @@ void setup(void) {
                // CDisplayU8x8<U8X8_SSD1306_128X32_UNIVISION_HW_I2C>(U8X8_PIN_NONE,
                // 4, 16);
       new CDisplayU8g2<U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C>(U8X8_PIN_NONE);
-  m_pDisplay->AddLine(0, 8, 25, u8g2_font_squeezed_b7_tr);
-  m_pDisplay->AddLine(0, 24, 15, u8g2_font_helvB14_tf);
-  // m_pDisplay->AddLine(0, 24, 25, u8g2_font_squeezed_b7_tr);
-  m_pDisplay->AddLine(0, 32, 25, u8g2_font_squeezed_b7_tr);
-  m_pWifi->SetDisplayLine(m_pDisplay->GetLine(0));
-  m_pSensor->SetDisplayLine(0, m_pDisplay->GetLine(1));
-  m_pFanControl->SetDisplayLine(m_pDisplay->GetLine(2));
+  m_pWifi->SetDisplayLine(m_pDisplay->AddLine(72, 6, 12, u8g2_font_4x6_tr));
+  m_pSensor->SetDisplayLine(0, m_pDisplay->AddLine(0, 8, 8, u8g2_font_5x7_tr));
+  // m_pFanControl->SetDisplayLine(m_pDisplay->AddLine(0, 16, 25,
+  // u8g2_font_squeezed_r7_tr));
+  m_pFanControl->SetDisplayLine(
+      m_pDisplay->AddLine(30, 8, 25, u8g2_font_4x6_tr));
 #endif
 
   m_pFanControl->m_pDS18B20 = m_pSensor;
-
+  m_pFanControl->m_pXBM_Temp = m_pDisplay->AddXbm(0, 9, 128, 23);
   m_pConfig->load();
   CControl::Log(CControl::I, "loading config took %ldms",
                 millis() - nMillisLast);
@@ -443,7 +442,8 @@ void loop(void) {
     break;
 
   case CButton::eLongClick:
-    m_pFanControl->SwitchControlMode(CFanControl::eAutomatic);
+    // m_pFanControl->SwitchControlMode(CFanControl::eAutomatic);
+    m_pFanControl->OnButtonLongClick();
     m_pButton->setButtonState(CButton::eNone);
     break;
 
