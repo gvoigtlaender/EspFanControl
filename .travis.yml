@@ -18,4 +18,4 @@ install:
     - pio update
 
 script:
-    - pio run -e esp12e
+    - pio run -e esp12e 
