@@ -1,0 +1,21 @@
+language: python
+python:
+    - "3.9"
+
+# Cache PlatformIO packages using Travis CI container-based infrastructure
+sudo: false
+#cache:
+#    directories:
+#        - "~/.platformio"
+#        - $HOME/.cache/pip
+
+env:
+    - PLATFORMIO_CI_SRC=fw
+
+install:
+    - pip install -U platformio
+    - pip install urllib3==1.26.6
+    - pio update
+
+script:
+    - pio run -e esp12e
