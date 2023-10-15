@@ -3,7 +3,7 @@
  */
 #include <Arduino.h>
 
-char VERSION_STRING[] = "0.0.2.2";
+char VERSION_STRING[] = "0.0.2.4";
 char APPNAME[] = "EspFanControl";
 char SHORTNAME[] = "ESPFC";
 
@@ -63,8 +63,6 @@ CConfigKey<string> *m_pDeviceName = NULL;
 #include <WiFiClient.h>
 
 CWebServer server(80);
-// const size_t szhtml_content_buffer_size = 2800;
-// static char szhtml_content_buffer[szhtml_content_buffer_size] = {0};
 
 #include <CUpdater.h>
 CUpdater *m_pUpdater = NULL;
@@ -85,7 +83,7 @@ string sHtmlHead =
 void handleStatusUpdate() {
   // CControl::Log(CControl::I, "handleStatusUpdate, args=%d", server.args());
   // string sUpdate = "";
-  CheckFreeHeap();
+  // CheckFreeHeap();
   time_t m_RawTime;
   struct tm *m_pTimeInfo;
   time(&m_RawTime);
@@ -94,7 +92,7 @@ void handleStatusUpdate() {
   // asctime(m_pTimeInfo);
   char mbstr[100];
   std::strftime(mbstr, sizeof(mbstr), "%A %c", m_pTimeInfo);
-  CheckFreeHeap();
+  // CheckFreeHeap();
   // std::map<string, string> oStates;
   std::vector<std::pair<string, string>> oStates;
   oStates.push_back(std::make_pair(
@@ -103,11 +101,13 @@ void handleStatusUpdate() {
       "Fan Mode", m_pFanControl->m_pMqtt_ControlMode->getValue()));
   oStates.push_back(
       std::make_pair("Fan State", m_pFanControl->m_pMqtt_FanState->getValue()));
-  oStates.push_back(std::make_pair("Heap", std::to_string(g_uiHeap)));
-  oStates.push_back(std::make_pair("Heap Min", std::to_string(g_uiHeapMin)));
+  oStates.push_back(
+      std::make_pair("Scroll Mode", m_pFanControl->m_ValuesAct->m_sName));
+  // oStates.push_back(std::make_pair("Heap", std::to_string(g_uiHeap)));
+  // oStates.push_back(std::make_pair("Heap Min", std::to_string(g_uiHeapMin)));
 
-  oStates.push_back(std::make_pair(
-      "FS Free", std::to_string(LittleFS_GetFreeSpaceKb()) + string("kB")));
+  // oStates.push_back(std::make_pair(
+  //    "FS Free", std::to_string(LittleFS_GetFreeSpaceKb()) + string("kB")));
 
   string sMqttState = "OK";
   if (!m_pMqtt->isConnected()) {
@@ -118,7 +118,7 @@ void handleStatusUpdate() {
   }
   oStates.push_back(std::make_pair("MQTT", sMqttState));
 
-  CheckFreeHeap();
+  // CheckFreeHeap();
 
   string sContent = "";
   sContent += string(mbstr) + string("\n");
@@ -133,7 +133,7 @@ void handleStatusUpdate() {
 
   sContent += "</td></tr>\n";
   sContent += "</table>\n";
-  CheckFreeHeap();
+  // CheckFreeHeap();
   server.send(200, "text/html", sContent.c_str());
   CControl::Log(CControl::D, "handleStatusUpdate done, buffersize=%u",
                 sContent.length());
@@ -143,6 +143,7 @@ void handleTitle() {
   CControl::Log(CControl::I, "handleTitle");
   server.send(200, "text/html", APPNAMEVER.c_str());
 }
+
 void handleDeviceName() {
   CControl::Log(CControl::I, "handleDeviceName");
   server.send(200, "text/html", m_pDeviceName->m_pTValue->m_Value.c_str());
@@ -150,6 +151,7 @@ void handleDeviceName() {
 
 void handleSwitch() {
   CControl::Log(CControl::I, "handleSwitch, args=%d", server.args());
+  server.send(200, "text/html", "");
   if (server.args() > 0) {
     // m_pConfig->handleArgs(&server);
     for (int n = 0; n < server.args(); n++) {
@@ -158,14 +160,18 @@ void handleSwitch() {
     }
     if (server.argName(0) == String("o")) {
       int n = atoi(server.arg(0).c_str());
-      if (n >= CFanControl::eAutomatic && n <= CFanControl::eOff)
-        m_pFanControl->SwitchControlMode((CFanControl::E_LIGHTCONTROLMODE)n);
+      if (n >= CFanControl::eAutomatic && n <= CFanControl::eOff) {
+        m_pFanControl->SwitchControlMode((CFanControl::E_FANCONTROLMODE)n);
+      } else {
+        m_pFanControl->OnButtonLongClick();
+      }
     }
     if (server.argName(0) == String("rst") && server.arg(0) == String("")) {
       ESP.restart();
     }
   }
 }
+
 void handleNotFound() {
   String message = "File Not Found\n\n";
   message += "URI: ";
@@ -191,10 +197,9 @@ void SetupServer() {
   server.on("/statusupdate.html", handleStatusUpdate);
   server.on("/title", handleTitle);
   server.on("/devicename", handleDeviceName);
-  // server.on("/configure", handleConfigure);
 
   m_pConfig->SetupServer(&server, false);
-  // server.on("/", handleRoot);
+
   server.serveStatic("/", "index.html");
   server.on("/switch", handleSwitch);
   server.onNotFound(handleNotFound);
@@ -247,6 +252,8 @@ void wifisetupfailed() {
 
   return;
 }
+
+/*
 void check_if_exist_I2C() {
   byte error, address;
   int nDevices;
@@ -280,7 +287,7 @@ void check_if_exist_I2C() {
   // delay(1000);           // wait 1 seconds for next scan, did not find it
   // necessary
 }
-
+*/
 unsigned int nMillisLast = 0;
 void setup(void) {
   nMillisLast = millis();
@@ -311,8 +318,7 @@ void setup(void) {
   // CControl::Log(CControl::D, "szhtml_content_buffer size=%u",
   // szhtml_content_buffer_size);
 
-  m_pConfig =
-      new CConfiguration("/config.json", APPNAMEVER.c_str(), sHtmlHead.c_str());
+  m_pConfig = new CConfiguration("/config.json");
   m_pDeviceName = new CConfigKey<string>("Device", "Name", SHORTNAME);
 
   m_pWifi = new CWifi(APPNAME, WLAN_SSID, WLAN_PASSWD);
@@ -320,7 +326,7 @@ void setup(void) {
   m_pNtp = new CNtp();
   m_pSyslog = new CSyslog(APPNAME, SHORTNAME);
   m_pFanControl = new CFanControl(PIN_FAN);
-  m_pSensor = new CSensorDS18B20(PIN_ONEWIRE);
+  m_pSensor = new CSensorDS18B20(PIN_ONEWIRE, nullptr, 20.0, 30.0);
   m_pButton = new CButton(PIN_BTN);
   // m_pLed = new CLed(PIN_LED);
 
@@ -358,12 +364,12 @@ void setup(void) {
   nMillisLast = millis();
 
   CControl::Log(CControl::I, "starting server");
+  WiFi.setHostname(m_pDeviceName->GetValue().c_str());
   SetupServer();
   nMillisLast = millis();
   CControl::Log(CControl::I, "server started");
 
-  m_pUpdater =
-      new CUpdater(&server, "/update", APPNAMEVER.c_str(), sHtmlHead.c_str());
+  m_pUpdater = new CUpdater(&server, "/update");
 
   CControl::Log(CControl::I, "setup()");
   if (!CControl::Setup()) {

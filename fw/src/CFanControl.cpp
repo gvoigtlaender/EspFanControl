@@ -71,10 +71,14 @@ void CFanControl::control(bool bForce /*= false*/) {
   case eControl:
 
     double dTemp = m_pDS18B20->GetTemperature(0);
+    if (dTemp < 10.0) {
+      _log(W, "skip for temp < 10C");
+      break;
+    }
     if (m_eFanControlMode == eAutomatic) {
-      char szTmp[16];
-      snprintf(szTmp, sizeof(szTmp), "%.1f", dTemp);
-      m_pMqtt_Temperature->setValue(szTmp);
+
+      std::string sTmp(FormatString<16>("%.1f", dTemp));
+      m_pMqtt_Temperature->setValue(sTmp);
       if (m_bIsOn) {
         if (dTemp < m_pTempFanOff->GetValue()) {
           SetOutput(false);
@@ -144,7 +148,7 @@ void CFanControl::OnButtonLongClick() {
   UpdateXBM(true);
 }
 
-void CFanControl::SwitchControlMode(E_LIGHTCONTROLMODE eMode) {
+void CFanControl::SwitchControlMode(E_FANCONTROLMODE eMode) {
   switch (eMode) {
   case eAutomatic:
     m_pMqtt_ControlMode->setValue("auto");
@@ -206,7 +210,7 @@ void CFanControl::UpdateXBM(bool bForce) {
   if (!m_pXBM_Temp)
     return;
 
-  _log(D, "UpdateXBM %s", m_ValuesAct->m_sName.c_str());
+  // _log(D, "UpdateXBM %s", m_ValuesAct->m_sName.c_str());
 
   m_pXBM_Temp->Clear();
   m_pXBM_Temp->FromVectorI(m_ValuesAct->m_ValuesT);

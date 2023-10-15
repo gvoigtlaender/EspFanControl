@@ -43,10 +43,10 @@ public:
   void OnButtonLongClick();
 
   E_STATES m_eControlState;
-  enum E_LIGHTCONTROLMODE { eAutomatic = 0, eOn, eOff };
-  E_LIGHTCONTROLMODE m_eFanControlMode = eAutomatic;
+  enum E_FANCONTROLMODE { eAutomatic = 0, eOn, eOff };
+  E_FANCONTROLMODE m_eFanControlMode = eAutomatic;
 
-  void SwitchControlMode(E_LIGHTCONTROLMODE eMode);
+  void SwitchControlMode(E_FANCONTROLMODE eMode);
 
   CConfigKey<double> *m_pTempFanOn = NULL;
   CConfigKey<double> *m_pTempFanOff = NULL;
