@@ -18,4 +18,5 @@ install:
     - pio update
 
 script:
+    - cd fw
     - pio run -e esp12e 
