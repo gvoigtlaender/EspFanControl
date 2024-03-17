@@ -3,7 +3,7 @@
  */
 #include <Arduino.h>
 
-char VERSION_STRING[] = "0.0.2.4";
+char VERSION_STRING[] = "0.0.2.5";
 char APPNAME[] = "EspFanControl";
 char SHORTNAME[] = "ESPFC";
 
@@ -96,7 +96,7 @@ void handleStatusUpdate() {
   // std::map<string, string> oStates;
   std::vector<std::pair<string, string>> oStates;
   oStates.push_back(std::make_pair(
-      "Temperature", std::to_string(m_pSensor->GetTemperature(0))));
+      "Temperature", std::to_string(m_pSensor->GetTemperatureRaw(0))));
   oStates.push_back(std::make_pair(
       "Fan Mode", m_pFanControl->m_pMqtt_ControlMode->getValue()));
   oStates.push_back(
