@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "kicad_parts")(type "KiCad")(uri "/home/georgv/github/kicad_parts/kicad_parts.pretty")(options "")(descr ""))
+)
