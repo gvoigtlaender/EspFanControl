@@ -322,6 +322,13 @@ void setup(void) {
   m_pConfig = new CConfiguration("/config.json");
   m_pDeviceName = CControl::CreateConfigKey<string>("Device", "Name", SHORTNAME);
 
+#if !defined(WLAN_SSID)
+#define  WLAN_SSID ""
+#endif
+#if !defined(WLAN_PASSWD)
+#define WLAN_PASSWD ""
+#endif
+
   m_pWifi = new CWifi(APPNAME, WLAN_SSID, WLAN_PASSWD);
   m_pMqtt = new CMqtt();
   m_pNtp = new CNtp();
