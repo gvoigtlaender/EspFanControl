@@ -25,3 +25,6 @@ jobs:
 
       - name: Build ESP12E
         run: pio run -e esp12e
+
+      - name: Build ESP12E 5V
+        run: pio run -e esp12e5v
