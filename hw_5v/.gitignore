@@ -1,0 +1,9 @@
+EspFanControl-backups
+jlcpcb
+*.sch
+*.lib
+*.dcm
+*-cache.lib
+*.kicad_sch_old
+*.kicad_prl
+*.step
