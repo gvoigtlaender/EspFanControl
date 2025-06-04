@@ -1,20 +1,21 @@
-/* Copyright 2019 Georg Voigtlaender gvoigtlaender@googlemail.com */
+/* Copyright 2025 Georg Voigtlaender gvoigtlaender@googlemail.com */
 /*
  */
 #include <Arduino.h>
 
-char VERSION_STRING[] = "0.0.3.0";
+char VERSION_STRING[] = "0.4.0";
 char APPNAME[] = "EspFanControl";
 char SHORTNAME[] = "ESPFC";
 
 #include <string>
 using std::string;
-#include "config.h"
 #include <ctime>
 #include <iostream>
 #include <list>
 #include <map>
 #include <vector>
+
+#include "config.h"
 
 string APPNAMEVER = APPNAME + string(" ") + VERSION_STRING;
 
@@ -24,7 +25,6 @@ CSyslog *m_pSyslog = NULL;
 #pragma endregion
 
 #include <CControl.h>
-
 #include <CMqtt.h>
 CMqtt *m_pMqtt = NULL;
 
@@ -33,6 +33,7 @@ CWifi *m_pWifi = NULL;
 
 #if USE_DISPLAY == 1
 #include <CDisplay.h>
+#include <CXbm.h>
 CDisplayBase *m_pDisplay = NULL;
 #endif
 
@@ -51,8 +52,8 @@ CSensorDS18B20 *m_pSensor = NULL;
 #include <CBase.h>
 
 #pragma region configuration
-#include <CConfiguration.h>
 #include <CConfigValue.h>
+#include <CConfiguration.h>
 CConfiguration *m_pConfig = NULL;
 CConfigKey<string> *m_pDeviceName = NULL;
 #pragma endregion
@@ -70,31 +71,15 @@ CUpdater *m_pUpdater = NULL;
 string sStylesCss = "styles.css";
 string sJavascriptJs = "javascript.js";
 
-string sHtmlHead =
-    "<link rel=\"stylesheet\" type=\"text/css\"  href=\"/" + sStylesCss +
-    "\">\n"
-    "<script language=\"javascript\" type=\"text/javascript\" src=\"/" +
-    sJavascriptJs +
-    "\"></script>\n"
-    "<meta name=\"viewport\" content=\"width=device-width, "
-    "initial-scale=1.0, maximum-scale=1.0, user-scalable=0\">\n"
-    "<meta charset='utf-8'><meta name=\"viewport\" "
-    "content=\"width=device-width,initial-scale=1,user-scalable=no\"/>\n";
-
 void handleStatusUpdate() {
-  // CControl::Log(CControl::I, "handleStatusUpdate, args=%d", server.args());
-  // string sUpdate = "";
-  // CheckFreeHeap();
   time_t m_RawTime;
   struct tm *m_pTimeInfo;
   time(&m_RawTime);
   m_pTimeInfo = localtime(&m_RawTime);
 
-  // asctime(m_pTimeInfo);
   char mbstr[100];
   std::strftime(mbstr, sizeof(mbstr), "%A %c", m_pTimeInfo);
-  // CheckFreeHeap();
-  // std::map<string, string> oStates;
+
   std::vector<std::pair<string, string>> oStates;
   oStates.push_back(std::make_pair(
       "Temperature", std::to_string(m_pSensor->GetTemperatureRaw(0))));
@@ -104,11 +89,6 @@ void handleStatusUpdate() {
       std::make_pair("Fan State", m_pFanControl->m_pMqtt_FanState->getValue()));
   oStates.push_back(
       std::make_pair("Scroll Mode", m_pFanControl->m_ValuesAct->m_sName));
-  // oStates.push_back(std::make_pair("Heap", std::to_string(g_uiHeap)));
-  // oStates.push_back(std::make_pair("Heap Min", std::to_string(g_uiHeapMin)));
-
-  // oStates.push_back(std::make_pair(
-  //    "FS Free", std::to_string(LittleFS_GetFreeSpaceKb()) + string("kB")));
 
   string sMqttState = "OK";
   if (!m_pMqtt->isConnected()) {
@@ -118,8 +98,6 @@ void handleStatusUpdate() {
       sMqttState = "FAIL";
   }
   oStates.push_back(std::make_pair("MQTT", sMqttState));
-
-  // CheckFreeHeap();
 
   string sContent = "";
   sContent += string(mbstr) + string("\n");
@@ -134,7 +112,7 @@ void handleStatusUpdate() {
 
   sContent += "</td></tr>\n";
   sContent += "</table>\n";
-  // CheckFreeHeap();
+
   server.send(200, "text/html", sContent.c_str());
   CControl::Log(CControl::D, "handleStatusUpdate done, buffersize=%u",
                 sContent.length());
@@ -150,11 +128,17 @@ void handleDeviceName() {
   server.send(200, "text/html", m_pDeviceName->m_pTValue->m_Value.c_str());
 }
 
+void handleGetXbm() {
+  CControl::Log(CControl::I, "handleGetXbm");
+  server.send_P(200, "application/octet-stream",
+                (PGM_P)m_pFanControl->m_pXBM_Temp->getBuffer(),
+                m_pFanControl->m_pXBM_Temp->getBufferSize());
+}
+
 void handleSwitch() {
   CControl::Log(CControl::I, "handleSwitch, args=%d", server.args());
   server.send(200, "text/html", "");
   if (server.args() > 0) {
-    // m_pConfig->handleArgs(&server);
     for (int n = 0; n < server.args(); n++) {
       CControl::Log(CControl::I, "Arg %d: %s = %s", n,
                     server.argName(n).c_str(), server.arg(n).c_str());
@@ -198,6 +182,7 @@ void SetupServer() {
   server.on("/statusupdate.html", handleStatusUpdate);
   server.on("/title", handleTitle);
   server.on("/devicename", handleDeviceName);
+  server.on("/xbm", handleGetXbm);
 
   m_pConfig->SetupServer(&server, false);
 
@@ -207,8 +192,6 @@ void SetupServer() {
 }
 
 void wifisetupfailed() {
-  // Set WiFi to station mode and disconnect from an AP if it was previously
-  // connected
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
 
@@ -222,7 +205,6 @@ void wifisetupfailed() {
     Serial.print(n);
     Serial.println(" networks found");
     for (int i = 0; i < n; ++i) {
-      // Print SSID and RSSI for each network found
       Serial.print(i + 1);
       Serial.print(": ");
       Serial.print(WiFi.SSID(i));
@@ -254,41 +236,6 @@ void wifisetupfailed() {
   return;
 }
 
-/*
-void check_if_exist_I2C() {
-  byte error, address;
-  int nDevices;
-  nDevices = 0;
-  for (address = 1; address < 127; address++) {
-    // The i2c_scanner uses the return value of
-    // the Write.endTransmisstion to see if
-    // a device did acknowledge to the address.
-    Wire.beginTransmission(address);
-    error = Wire.endTransmission();
-
-    if (error == 0) {
-      Serial.print("I2C device found at address 0x");
-      if (address < 16)
-        Serial.print("0");
-      Serial.print(address, HEX);
-      Serial.println("  !");
-
-      nDevices++;
-    } else if (error == 4) {
-      Serial.print("Unknow error at address 0x");
-      if (address < 16)
-        Serial.print("0");
-      Serial.println(address, HEX);
-    }
-  } // for loop
-  if (nDevices == 0)
-    Serial.println("No I2C devices found");
-  else
-    Serial.println("**********************************\n");
-  // delay(1000);           // wait 1 seconds for next scan, did not find it
-  // necessary
-}
-*/
 unsigned int nMillisLast = 0;
 void setup(void) {
   nMillisLast = millis();
@@ -301,13 +248,11 @@ void setup(void) {
   check_if_exist_I2C();
 
 #if defined(USE_LITTLEFS)
-  // Initialize LittleFS
   if (!LittleFS.begin()) {
     CControl::Log(CControl::E, "An Error has occurred while mounting LittleFS");
     return;
   }
 #else
-  // Initialize SPIFFS
   if (!SPIFFS.begin(true)) {
     CControl::Log(CControl::E, "An Error has occurred while mounting SPIFFS");
     return;
@@ -315,15 +260,13 @@ void setup(void) {
 #endif
 
   Serial.println(ESP.getFreeHeap(), DEC);
-  // szhtml_content_buffer = (char *)malloc(szhtml_content_buffer_size);
-  // CControl::Log(CControl::D, "szhtml_content_buffer size=%u",
-  // szhtml_content_buffer_size);
 
   m_pConfig = new CConfiguration("/config.json");
-  m_pDeviceName = CControl::CreateConfigKey<string>("Device", "Name", SHORTNAME);
+  m_pDeviceName =
+      CControl::CreateConfigKey<string>("Device", "Name", SHORTNAME);
 
 #if !defined(WLAN_SSID)
-#define  WLAN_SSID ""
+#define WLAN_SSID ""
 #endif
 #if !defined(WLAN_PASSWD)
 #define WLAN_PASSWD ""
@@ -339,16 +282,17 @@ void setup(void) {
   // m_pLed = new CLed(PIN_LED);
 
 #if defined(USE_DISPLAY)
-  m_pDisplay = // new
-               // CDisplayU8x8<U8X8_SSD1306_128X32_UNIVISION_HW_I2C>(U8X8_PIN_NONE,
-               // 4, 16);
+  m_pDisplay =  // new
+                // CDisplayU8x8<U8X8_SSD1306_128X32_UNIVISION_HW_I2C>(U8X8_PIN_NONE,
+                // 4, 16);
       new CDisplayU8g2<U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C>(U8X8_PIN_NONE);
+  // new CDisplayU8g2<U8G2_SSD1306_128X64_NONAME_F_HW_I2C>(U8X8_PIN_NONE);
   m_pWifi->SetDisplayLine(m_pDisplay->AddLine(72, 6, 12, u8g2_font_4x6_tr));
-  m_pSensor->SetDisplayLine(0, m_pDisplay->AddLine(0, 8, 8, u8g2_font_5x7_tr));
+  m_pSensor->SetDisplayLine(0, m_pDisplay->AddLine(0, 8, 8, u8g2_font_6x10_tf));
   // m_pFanControl->SetDisplayLine(m_pDisplay->AddLine(0, 16, 25,
   // u8g2_font_squeezed_r7_tr));
   m_pFanControl->SetDisplayLine(
-      m_pDisplay->AddLine(30, 8, 25, u8g2_font_4x6_tr));
+      m_pDisplay->AddLine(34, 8, 25, u8g2_font_4x6_tr));
 #endif
 
   m_pFanControl->m_pDS18B20 = m_pSensor;
@@ -381,7 +325,6 @@ void setup(void) {
 
   CControl::Log(CControl::I, "setup()");
   if (!CControl::Setup()) {
-    // server.on("/", handleConfigure);
     m_pConfig->SetupServer(&server, true);
     server.begin();
     CControl::Log(CControl::I, "HTTP server started");
@@ -400,7 +343,6 @@ void setup(void) {
 bool bStarted = false;
 uint64_t nMillis = millis() + 1000;
 void ServerStart() {
-
   if (WiFi.status() != WL_CONNECTED) {
     nMillis = millis() + 2000;
     return;
@@ -420,14 +362,6 @@ void ServerStart() {
 void loop(void) {
   if (bStarted) {
     server.handleClient();
-    /*
-    if (nMillis < millis()) {
-      bStarted = false;
-      server.close();
-    }
-    */
-    // httpServer.handleClient();
-    // MDNS.update();
   } else {
     if (nMillis < millis()) {
       if (digitalRead(0) == LOW || true) {
@@ -439,31 +373,29 @@ void loop(void) {
   CControl::Control();
 
   switch (m_pButton->getButtonState()) {
-  case CButton::eNone:
-    break;
+    case CButton::eNone:
+      break;
 
-  case CButton::ePressed:
-    break;
+    case CButton::ePressed:
+      break;
 
-  case CButton::eClick:
-    m_pFanControl->OnButtonClick();
-    // m_pLed->AddBlinkTask(CLed::BLINK_1);
-    m_pButton->setButtonState(CButton::eNone);
-    break;
+    case CButton::eClick:
+      m_pFanControl->OnButtonClick();
+      m_pButton->setButtonState(CButton::eNone);
+      break;
 
-  case CButton::eDoubleClick:
-    m_pButton->setButtonState(CButton::eNone);
-    break;
+    case CButton::eDoubleClick:
+      m_pButton->setButtonState(CButton::eNone);
+      break;
 
-  case CButton::eLongClick:
-    // m_pFanControl->SwitchControlMode(CFanControl::eAutomatic);
-    m_pFanControl->OnButtonLongClick();
-    m_pButton->setButtonState(CButton::eNone);
-    break;
+    case CButton::eLongClick:
+      m_pFanControl->OnButtonLongClick();
+      m_pButton->setButtonState(CButton::eNone);
+      break;
 
-  case CButton::eVeryLongClick:
-    m_pButton->setButtonState(CButton::eNone);
-    break;
+    case CButton::eVeryLongClick:
+      m_pButton->setButtonState(CButton::eNone);
+      break;
   }
 
   CheckFreeHeap();

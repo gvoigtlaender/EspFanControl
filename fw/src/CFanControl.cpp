@@ -109,7 +109,6 @@ void CFanControl::control(bool bForce /*= false*/) {
         }
       }
       m_pXBM_Temp->m_uiTimer += 100;
-      // _log(I, "update display in %.1fs", dSecs);
     }
     break;
   }
@@ -213,8 +212,6 @@ void CFanControl::updateStateString() {
 void CFanControl::UpdateXBM(bool bForce) {
   if (!m_pXBM_Temp)
     return;
-
-  // _log(D, "UpdateXBM %s", m_ValuesAct->m_sName.c_str());
 
   m_pXBM_Temp->Clear();
   m_pXBM_Temp->FromVectorI(m_ValuesAct->m_ValuesT);
