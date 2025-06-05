@@ -3,7 +3,7 @@
  */
 #include <Arduino.h>
 
-char VERSION_STRING[] = "0.4.0";
+char VERSION_STRING[] = "0.4.1";
 char APPNAME[] = "EspFanControl";
 char SHORTNAME[] = "ESPFC";
 
@@ -336,6 +336,15 @@ void setup(void) {
       APPNAMEVER + " " + string("Framework: ") + string(FWK_VERSION_STRING);
   m_pDisplay->Line(0, sVersion);
 
+  m_pDisplay->AddHoverLine(
+      []() {
+        char szTmp[32];
+        snprintf(szTmp, sizeof(szTmp), "%02.1f", m_pSensor->GetTemperature(0));
+        return string(szTmp) + string("°C");
+      },
+      u8g2_font_t0_17_tf, 64, 16);
+  m_pDisplay->enablePowerSafe(CDisplayBase::PowerSafeMode::hover, 10000, 100);
+
   Serial.println(ESP.getFreeHeap(), DEC);
   CControl::Log(CControl::I, "startup completed");
 }
@@ -380,8 +389,13 @@ void loop(void) {
       break;
 
     case CButton::eClick:
-      m_pFanControl->OnButtonClick();
-      m_pButton->setButtonState(CButton::eNone);
+      if (m_pDisplay->isPowerSafeActive()) {
+        m_pDisplay->powerSafeWakeup();
+        m_pButton->setButtonState(CButton::eNone);
+      } else {
+        m_pFanControl->OnButtonClick();
+        m_pButton->setButtonState(CButton::eNone);
+      }
       break;
 
     case CButton::eDoubleClick:
