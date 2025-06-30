@@ -3,7 +3,7 @@
  */
 #include <Arduino.h>
 
-char VERSION_STRING[] = "0.4.1";
+char VERSION_STRING[] = "0.4.2";
 char APPNAME[] = "EspFanControl";
 char SHORTNAME[] = "ESPFC";
 
@@ -404,6 +404,7 @@ void loop(void) {
 
     case CButton::eLongClick:
       m_pFanControl->OnButtonLongClick();
+      m_pDisplay->powerSafeWakeup();
       m_pButton->setButtonState(CButton::eNone);
       break;
 
